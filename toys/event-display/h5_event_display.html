@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>HICAD · HDF5 3D Point-Cloud Event Display</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout & visual language conserved from visual-eds/public:
+   full-bleed WebGPU 3D display; glass HUD top-left, legend top-right, control rail at the bottom. */
+:root{
+  color-scheme: dark;
+  --void:#060a13;
+  --panel:rgba(9,15,28,.76);
+  --ink:#dfe6f3;
+  --muted:#8796b1;
+  --line:rgba(140,165,205,.20);
+  --amber:#ffb24a;
+  --steel:#6f8db8;
+  --btn:rgba(120,150,200,.10);
+  --on-accent:#1a1205;
+  --display:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+html.light{
+  color-scheme: light;
+  --void:#eef1f6;
+  --panel:rgba(252,253,255,.86);
+  --ink:#172033;
+  --muted:#56637c;
+  --line:rgba(40,60,100,.20);
+  --amber:#b86400;
+  --steel:#41618f;
+  --btn:rgba(40,70,120,.07);
+  --on-accent:#ffffff;
+}
+html,body{height:100%;margin:0;padding:0;overflow:hidden}
+body{background:var(--void);color:var(--ink);font-family:var(--mono);font-size:12px}
+[hidden]{display:none!important}
+#app{position:fixed;inset:0}
+#app canvas{display:block;width:100%;height:100%;touch-action:none}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl{position:absolute;transform:translate(-50%,-100%);font:500 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.lbl b{color:var(--ink);font-weight:500}
+.lbl.psi{color:var(--amber);border-bottom-color:var(--amber)}
+.panel{position:absolute;background:var(--panel);border:1px solid var(--line);border-radius:6px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#hud{top:calc(16px + env(safe-area-inset-top,0px));left:16px;width:min(355px,calc(100% - 32px));padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.eyebrow{font:500 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--amber)}
+h1{margin:0;font:600 28px/1 var(--display);letter-spacing:.01em;text-wrap:balance}
+#hudToggle{all:unset;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;border-radius:3px}
+#hudToggle:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
+.chev{font-size:16px;color:var(--muted);transition:transform .2s}
+#hud.collapsed .chev{transform:rotate(-90deg)}
+.hud-body{display:flex;flex-direction:column;gap:10px}
+#hud.collapsed .hud-body,#hud.collapsed details{display:none}
+.beam{color:var(--muted);font-size:11px;line-height:1.35}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px;margin:0}
+.stats div{min-width:0}
+.stats dt{font-size:10px;letter-spacing:.04em;color:var(--muted)}
+.stats dd{margin:2px 0 0;font:600 18px/1.1 var(--display);font-variant-numeric:tabular-nums;color:var(--ink)}
+.phase{border-top:1px solid var(--line);padding-top:9px;display:flex;flex-direction:column;gap:3px}
+#phaseName{font:600 15px/1 var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--amber)}
+#phaseNote{color:var(--muted);font-size:11px;line-height:1.45}
+details{border-top:1px solid var(--line);padding-top:8px}
+summary{cursor:pointer;color:var(--muted);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase}
+summary:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+details p,details li{color:var(--muted);font-size:10.5px;line-height:1.5;margin:6px 0 0}
+details ul{margin:4px 0 0;padding-left:16px}
+details i{color:var(--ink);font-style:normal}
+#legend{top:calc(16px + env(safe-area-inset-top,0px));right:16px;padding:10px 12px;width:225px}
+#legend h2{margin:0 0 8px;font:500 10.5px/1.2 var(--mono);letter-spacing:.03em;color:var(--muted)}
+.ramp{height:8px;border-radius:2px}
+.ticks{position:relative;height:14px;margin-top:4px;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ticks span{position:absolute;transform:translateX(-50%)}
+.ticks span:first-child{transform:none}
+.ticks span:last-child{transform:translateX(-100%)}
+.keys{display:flex;flex-wrap:wrap;gap:6px 12px}
+.key{display:flex;align-items:center;gap:6px}
+.key i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.key i.dot{width:7px;height:7px;border-radius:50%}
+.key.muted{color:var(--muted)}
+#legend h2.sub{margin-top:12px}
+#legend .keys{margin-top:6px}
+#controls{left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));padding:10px 12px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+#controls.collapsed{right:auto;max-width:calc(100% - 32px)}
+.ctl-bar,.ctl-body{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.ctl-bar{gap:6px 8px}
+.ctl-bar label.chk{margin-left:6px}
+#controls.collapsed .ctl-body{display:none}
+#ctlToggle .chev{font-size:12px;margin-left:4px;display:inline-block;transition:transform .2s}
+#controls.collapsed #ctlToggle .chev{transform:rotate(180deg)}
+.grp{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.grp>span{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+button,select,input[type=number]{font:500 11.5px/1 var(--mono);color:var(--ink);background:var(--btn);border:1px solid var(--line);border-radius:4px;padding:7px 10px;cursor:pointer}
+input[type=number]{width:74px;cursor:text;padding:6px 8px}
+button:hover,select:hover,input[type=number]:hover{border-color:var(--steel)}
+button.primary{background:var(--amber);color:var(--on-accent);border-color:var(--amber);font-weight:600}
+button[aria-pressed="true"]{border-color:var(--amber);color:var(--amber)}
+input[type=range]{accent-color:var(--amber);width:105px}
+output{font-variant-numeric:tabular-nums;min-width:5ch;color:var(--ink)}
+label.chk{display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--ink)}
+input[type=checkbox]{accent-color:var(--amber)}
+#fail{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-inline:16px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6}
+@media (max-width:720px){
+  #legend{display:none}
+  #hud{padding:10px 12px;gap:7px}
+  h1{font-size:22px}
+  .stats dd{font-size:15px}
+  .hide-sm{display:none}
+  #controls,.ctl-body{gap:8px 10px}
+  input[type=range]{width:84px}
+}
+@media (max-height:620px){ details{display:none} }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="labels"></div>
+
+  <section class="panel" id="hud" aria-label="Event summary">
+    <div class="eyebrow" id="eyebrow">HICAD · HDF5 POINT CLOUD</div>
+    <h1><button id="hudToggle" type="button" aria-expanded="true" aria-controls="hudBody">3D Particle Display<span class="chev" aria-hidden="true">▾</span></button></h1>
+    <div id="hudBody" class="hud-body">
+      <div class="beam" id="beamLine">Connecting to HDF5 streaming server…</div>
+      <dl class="stats">
+        <div><dt>Event ID</dt><dd id="sEv">—</dd></div>
+        <div><dt>Centrality</dt><dd id="sCent">—</dd></div>
+        <div><dt>Multiplicity</dt><dd id="sMult">—</dd></div>
+        <div><dt>⟨p<sub>T</sub>⟩ (GeV/c)</dt><dd id="sMeanPt">—</dd></div>
+        <div><dt>Σp<sub>T</sub> (GeV/c)</dt><dd id="sSumPt">—</dd></div>
+        <div><dt>⟨η⟩</dt><dd id="sMeanEta">—</dd></div>
+        <div><dt>Ψ₂ (deg)</dt><dd id="sPsi2">—</dd></div>
+        <div class="hide-sm"><dt>sin Ψ₂ / cos Ψ₂</dt><dd id="sSinCos">—</dd></div>
+        <div class="hide-sm"><dt>b (fm)</dt><dd id="sB">—</dd></div>
+        <div class="hide-sm"><dt>N<sub>part</sub> / N<sub>coll</sub></dt><dd id="sNpNc">—</dd></div>
+        <div><dt>π± / K± / p,p̄</dt><dd id="sSpecies">—</dd></div>
+        <div class="hide-sm"><dt>Q+ / Q−</dt><dd id="sCharge">—</dd></div>
+      </dl>
+    </div>
+    <div class="phase" aria-live="polite">
+      <span id="phaseName">Streaming</span>
+      <span id="phaseNote">Waiting for event data from local Python HDF5 server…</span>
+    </div>
+    <details>
+      <summary>HDF5 Point-Cloud Schema</summary>
+      <ul>
+        <li><i>mc_record</i> (<code>float32[2]</code>): <code>[Ecm, Label]</code> — collision energy √s<sub>NN</sub> and generator code (<code>0.0X</code> Vanilla Thermal, <code>0.1X</code> UrQMD, <code>0.2X</code> Angantyr, <code>0.3X</code> JEWEL, <code>0.4X</code> HIJING, <code>0.5X</code> AMPT).</li>
+        <li><i>event_record</i> (<code>float32[N, 10]</code>): <code>[centrality, Multiplicity, b, N_part, N_coll, sin(Ψ₂), cos(Ψ₂), Mean_pT, Sum_pT, Eta_mean]</code>.</li>
+        <li><i>point_cloud</i> (<code>float16[N, max_M, 5]</code>): <code>[cos(φ), sin(φ), log(p_T/⟨p_T⟩), Q·log(1+m), η_i/⟨η⟩]</code>.</li>
+        <li><i>3D kinematics</i>: Free-streaming straight momentum rays (B = 0, no detectors) along <b>û</b><sub>i</sub> = (cos φ<sub>i</sub> / cosh η<sub>i</sub>, sin φ<sub>i</sub> / cosh η<sub>i</sub>, tanh η<sub>i</sub>).</li>
+      </ul>
+    </details>
+  </section>
+
+  <aside class="panel" id="legend" aria-label="Colour legend"></aside>
+
+  <section class="panel" id="controls" aria-label="Controls">
+    <div class="ctl-bar">
+      <button id="ctlToggle" type="button" aria-expanded="true" aria-controls="ctlBody">Controls<span class="chev" aria-hidden="true">▾</span></button>
+      <select id="iFile" aria-label="HDF5 Dataset File"></select>
+      <button id="bPrev" title="Previous matching event">◀</button>
+      <button id="bRandom" class="primary" title="Random event in centrality window (Shortcut: N)">Random event</button>
+      <button id="bNext" title="Next matching event">▶</button>
+      <input id="iEvIdx" type="number" min="0" max="99999" step="1" value="0" title="Jump to exact Event ID">
+      <button id="bReplay" title="Replay expansion animation (Shortcut: R)">Replay</button>
+      <button id="bPause" aria-pressed="false" title="Pause / Play animation (Shortcut: Space)">Pause</button>
+      <button id="bShot">Save screenshot</button>
+      <label class="chk"><input id="cLight" type="checkbox">Light</label>
+    </div>
+    <div class="ctl-body" id="ctlBody">
+      <div class="grp">
+        <span>Centrality</span>
+        <label class="chk"><input id="cAllCent" type="checkbox" checked>Min-Bias</label>
+        <input id="iCent" type="range" min="0" max="95" step="5" value="0" disabled aria-label="Centrality bin percent">
+        <output id="oCent">0–100%</output>
+      </div>
+      <div class="grp">
+        <span>Colour</span>
+        <select id="iColor" aria-label="Particle colour mode">
+          <option value="pt">pT (GeV/c)</option>
+          <option value="logpt">log(pT / ⟨pT⟩)</option>
+          <option value="species">Species (π, K, p)</option>
+          <option value="charge">Charge (Q±)</option>
+          <option value="eta">Pseudorapidity η</option>
+        </select>
+      </div>
+      <div class="grp">
+        <span>3D Mode</span>
+        <select id="iGeom" aria-label="3D geometry mode">
+          <option value="rays_beta" selected>Unit Sphere (β = p/E flight)</option>
+          <option value="rays_pt">Rays + Cloud (pT length)</option>
+          <option value="cloud_only">Point Cloud Only (3D p)</option>
+        </select>
+      </div>
+      <div class="grp">
+        <span>View</span>
+        <button id="v3d" aria-pressed="false">3D</button>
+        <button id="vBeam" aria-pressed="false">Beam (x–y)</button>
+        <button id="vSide" aria-pressed="true">Side (z–y)</button>
+        <button id="vPsi2" aria-pressed="false">Ψ₂ Plane</button>
+      </div>
+      <div class="grp">
+        <span>Point size</span>
+        <input id="iPtSize" type="range" min="0.4" max="3.0" step="0.1" value="1.0" aria-label="Point cloud marker size">
+        <output id="oPtSize">1.0×</output>
+      </div>
+      <div class="grp">
+        <span>Speed</span>
+        <input id="iSpeed" type="range" min="0.2" max="8" step="0.1" value="2.5" aria-label="Playback speed">
+        <output id="oSpeed">2.5×</output>
+      </div>
+      <div class="grp">
+        <label class="chk"><input id="cGrid" type="checkbox" checked>Axes &amp; |η|≤1</label>
+        <label class="chk"><input id="cPsi2" type="checkbox" checked>Ψ₂ axis</label>
+        <label class="chk"><input id="cLbl" type="checkbox" checked>Labels</label>
+        <label class="chk"><input id="cLoop" type="checkbox" checked>Auto-loop</label>
+        <label class="chk"><input id="cRot" type="checkbox">Orbit</label>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.171.0/build/three.webgpu.js",
+  "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.171.0/build/three.webgpu.js",
+  "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.171.0/build/three.tsl.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three/webgpu';
+import { uniform, attribute, float, vec3, color, mix, step, smoothstep, exp, abs,
+         positionLocal, pass } from 'three/tsl';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { bloom } from 'three/addons/tsl/display/BloomNode.js';
+
+const $ = id => document.getElementById(id);
+const app = $('app');
+
+/* ================= Constants & Buffers ================= */
+const MAX_PARTICLES = 4000;
+const SEGS_PER_RAY = 18;                         // Sub-segments per straight ray for smooth TSL head glow
+const MAX_RAY_VERTS = MAX_PARTICLES * SEGS_PER_RAY * 2;
+const R_REF = 4.0;                               // Reference radius in 3D scene units
+const V_EXPAND = 3.2;                            // Display expansion speed (units / s)
+
+/* ---------------- WebGPU / WebGL2 Renderer ---------------- */
+let renderer;
+try {
+  renderer = new THREE.WebGPURenderer({ antialias: true });
+  await renderer.init();
+} catch (e) {
+  fail('Could not start a WebGPU or WebGL2 renderer in this browser.');
+  throw e;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.setClearColor(0x060a13, 1);
+app.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x060a13, 38, 88);
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.02, 180);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 0.5;
+controls.maxDistance = 80;
+controls.autoRotateSpeed = 0.55;
+controls.autoRotate = false;
+
+scene.add(new THREE.HemisphereLight(0xbfd2ff, 0x1a1408, 1.4));
+const sun = new THREE.DirectionalLight(0xffffff, 2.0);
+sun.position.set(4, 6, 5);
+scene.add(sun);
+
+/* ---------------- TSL Uniforms ---------------- */
+const uT = uniform(0);          // Current expansion wavefront distance
+const uLight = uniform(0);      // 0 = dark theme, 1 = light theme
+const uRayOp = uniform(0.85);   // Ray opacity (0 in cloud_only mode)
+const themed = [];
+const lineMats = [];
+
+const lineMat = (hex, op) => {
+  const m = new THREE.LineBasicNodeMaterial({ color: hex, transparent: true, opacity: op, depthWrite: false });
+  m.userData.base = { color: new THREE.Color(hex), opacity: op };
+  lineMats.push(m);
+  return m;
+};
+
+function segs(v, mat, parent = scene) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+  const l = new THREE.LineSegments(g, mat);
+  parent.add(l);
+  return l;
+}
+
+function ringV(v, r, z, n = 96, a0 = 0, a1 = 2 * Math.PI) {
+  for (let i = 0; i < n; i++) {
+    const p0 = a0 + (i / n) * (a1 - a0);
+    const p1 = a0 + ((i + 1) / n) * (a1 - a0);
+    v.push(r * Math.cos(p0), r * Math.sin(p0), z, r * Math.cos(p1), r * Math.sin(p1), z);
+  }
+  return v;
+}
+
+/* ---------------- Minimalist Coordinate & Kinematic Guides (No Detectors) ---------------- */
+const gridGroup = new THREE.Group();
+scene.add(gridGroup);
+
+{
+  // 1. Beam axis (-z to +z) and transverse x, y axes through (0,0,0)
+  segs([0, 0, -9.0, 0, 0, 9.0], lineMat(0x8796b1, 0.35), gridGroup);
+  segs([-R_REF * 1.15, 0, 0, R_REF * 1.15, 0, 0, 0, -R_REF * 1.15, 0, 0, R_REF * 1.15, 0], lineMat(0x6f8db8, 0.18), gridGroup);
+
+  // 2. Transverse concentric reference rings at z = 0 (representing radial pT / distance scale)
+  const vRings = [];
+  for (const r of [R_REF * 0.25, R_REF * 0.5, R_REF * 0.75, R_REF]) {
+    ringV(vRings, r, 0, 96);
+  }
+  // Azimuthal φ ticks every 30° on outer z=0 ring
+  for (let k = 0; k < 12; k++) {
+    const a = (k * 30 * Math.PI) / 180;
+    vRings.push(
+      R_REF * 0.94 * Math.cos(a), R_REF * 0.94 * Math.sin(a), 0,
+      R_REF * 1.04 * Math.cos(a), R_REF * 1.04 * Math.sin(a), 0
+    );
+  }
+  segs(vRings, lineMat(0x6f8db8, 0.22), gridGroup);
+
+  // 3. Pseudorapidity |η| = 1.0 acceptance boundary cones
+  const vEta = [];
+  const rEta = R_REF * 0.75;
+  const zEta = rEta * Math.sinh(1.0);
+  ringV(vEta, rEta, zEta, 96);
+  ringV(vEta, rEta, -zEta, 96);
+  for (let k = 0; k < 8; k++) {
+    const a = (k * 45 * Math.PI) / 180;
+    const cx = rEta * Math.cos(a), cy = rEta * Math.sin(a);
+    vEta.push(0, 0, 0, cx, cy, zEta, 0, 0, 0, cx, cy, -zEta);
+  }
+  segs(vEta, lineMat(0x6ff2e3, 0.44), gridGroup);
+}
+
+// 4. Event-plane Ψ₂ principal axis & anisotropic flow indicator ring at z = 0
+const psi2Group = new THREE.Group();
+scene.add(psi2Group);
+{
+  const vPsi = [-R_REF * 1.25, 0, 0, R_REF * 1.25, 0, 0];
+  // Arrowheads at ±Ψ₂
+  const L = R_REF * 1.25;
+  vPsi.push(L, 0, 0, L - 0.22, 0.10, 0, L, 0, 0, L - 0.22, -0.10, 0);
+  vPsi.push(-L, 0, 0, -L + 0.22, 0.10, 0, -L, 0, 0, -L + 0.22, -0.10, 0);
+  // Elliptic v2 guide ring in transverse plane
+  const nE = 96;
+  for (let i = 0; i < nE; i++) {
+    const a0 = (i / nE) * 2 * Math.PI;
+    const a1 = ((i + 1) / nE) * 2 * Math.PI;
+    const r0 = R_REF * 0.55 * (1 + 0.14 * Math.cos(2 * a0));
+    const r1 = R_REF * 0.55 * (1 + 0.14 * Math.cos(2 * a1));
+    vPsi.push(r0 * Math.cos(a0), r0 * Math.sin(a0), 0, r1 * Math.cos(a1), r1 * Math.sin(a1), 0);
+  }
+  segs(vPsi, lineMat(0xffb24a, 0.45), psi2Group);
+}
+
+/* ---------------- 3D Particle Rays (LineSegments + TSL Glow Head) ---------------- */
+const rPos = new Float32Array(MAX_RAY_VERTS * 3);
+const rPath = new Float32Array(MAX_RAY_VERTS);
+const rCol = new Float32Array(MAX_RAY_VERTS * 3);
+
+const rayGeo = new THREE.BufferGeometry();
+const aPos = new THREE.BufferAttribute(rPos, 3).setUsage(THREE.DynamicDrawUsage);
+const aPath = new THREE.BufferAttribute(rPath, 1).setUsage(THREE.DynamicDrawUsage);
+const aCol = new THREE.BufferAttribute(rCol, 3).setUsage(THREE.DynamicDrawUsage);
+rayGeo.setAttribute('position', aPos);
+rayGeo.setAttribute('pathT', aPath);
+rayGeo.setAttribute('tcol', aCol);
+rayGeo.setDrawRange(0, 0);
+
+const rayMat = new THREE.LineBasicNodeMaterial({
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+});
+{
+  const pT = attribute('pathT', 'float');
+  const head = exp(uT.sub(pT).max(0).mul(-6.5)).mul(2.8).add(1.0);
+  rayMat.colorNode = attribute('tcol', 'vec3').mul(mix(head, float(0.72), uLight));
+  rayMat.opacityNode = step(pT, uT).mul(uRayOp);
+  themed.push(rayMat);
+}
+const rayLines = new THREE.LineSegments(rayGeo, rayMat);
+rayLines.frustumCulled = false;
+scene.add(rayLines);
+
+/* ---------------- 3D Point-Cloud Nodes (InstancedMesh Octahedra) ---------------- */
+const ptGeo = new THREE.OctahedronGeometry(1, 1);
+const pTAttr = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PARTICLES), 1).setUsage(THREE.DynamicDrawUsage);
+const pColAttr = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PARTICLES * 3), 3).setUsage(THREE.DynamicDrawUsage);
+ptGeo.setAttribute('hitT', pTAttr);
+ptGeo.setAttribute('hcol', pColAttr);
+
+const ptMat = new THREE.MeshBasicNodeMaterial({
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+});
+{
+  const ht = attribute('hitT', 'float');
+  const flash = exp(uT.sub(ht).max(0).mul(-4.5)).mul(2.5).add(1.25);
+  ptMat.colorNode = attribute('hcol', 'vec3').mul(mix(flash, float(0.75), uLight));
+  ptMat.opacityNode = smoothstep(float(0.0), float(0.08), uT);
+  themed.push(ptMat);
+}
+const pointCloudMesh = new THREE.InstancedMesh(ptGeo, ptMat, MAX_PARTICLES);
+pointCloudMesh.count = 0;
+pointCloudMesh.frustumCulled = false;
+pointCloudMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+scene.add(pointCloudMesh);
+
+/* ---------------- Post-Processing Bloom ---------------- */
+let post = null;
+try {
+  post = new THREE.PostProcessing(renderer);
+  const sp = pass(scene, camera);
+  const col = sp.getTextureNode('output');
+  post.outputNode = col.add(bloom(col, 0.6, 0.35, 0.15));
+} catch (e) {
+  post = null;
+}
+
+/* ================= Colour Palettes (Conserved from visual-eds) ================= */
+const PT_STOPS = [0, 0.4, 1.0, 2.0, 4.0];
+const PT_COLS = ['#3b5bff', '#2fc4e0', '#7be38a', '#ffd166', '#ff5d3a'].map(h => new THREE.Color(h));
+
+const LOGPT_STOPS = [-1.5, -0.5, 0.0, 0.6, 1.5];
+const LOGPT_COLS = ['#3b5bff', '#2fc4e0', '#dfe6f3', '#ffb24a', '#ff5d3a'].map(h => new THREE.Color(h));
+
+const ETA_STOPS = [-1.0, -0.5, 0.0, 0.5, 1.0];
+const ETA_COLS = ['#4fa3ff', '#5fd3c6', '#dfe6f3', '#ffb24a', '#ff6b8b'].map(h => new THREE.Color(h));
+
+const CH_COLS = { '1': new THREE.Color('#ff7a59'), '-1': new THREE.Color('#4fa3ff') };
+const SP_INFO = [
+  { name: 'π±', col: new THREE.Color('#7aa2ff') },
+  { name: 'K±', col: new THREE.Color('#ffd166') },
+  { name: 'p, p̄', col: new THREE.Color('#ff6b8b') },
+];
+
+const tmpC = new THREE.Color();
+function interpRamp(val, stops, cols) {
+  const clamped = Math.min(Math.max(val, stops[0]), stops[stops.length - 1]);
+  let i = 0;
+  while (i < stops.length - 2 && clamped > stops[i + 1]) i++;
+  const f = (clamped - stops[i]) / Math.max(1e-6, stops[i + 1] - stops[i]);
+  return tmpC.copy(cols[i]).lerp(cols[i + 1], f);
+}
+
+function particleColor(p, mode) {
+  if (mode === 'charge') return p.q > 0 ? CH_COLS['1'] : CH_COLS['-1'];
+  if (mode === 'species') return (SP_INFO[p.sp] || SP_INFO[0]).col;
+  if (mode === 'logpt') return interpRamp(p.log_pt_ratio, LOGPT_STOPS, LOGPT_COLS);
+  if (mode === 'eta') return interpRamp(p.eta, ETA_STOPS, ETA_COLS);
+  return interpRamp(p.pt, PT_STOPS, PT_COLS);
+}
+
+/* ================= State & Geometry Builder ================= */
+let filesCatalog = [];
+let currentFile = '';
+let currentEv = null;
+let parsedParticles = [];
+let maxPathLen = R_REF;
+
+let colorMode = 'pt';
+let geomMode = 'rays_beta';
+let ptSizeMult = 1.0;
+let simT = 0;
+let paused = false;
+let speed = 2.5;
+let autoLoop = true;
+
+const dummyMat = new THREE.Matrix4();
+const dummyPos = new THREE.Vector3();
+const dummyQuat = new THREE.Quaternion();
+const dummyScale = new THREE.Vector3();
+
+function rebuildGeometry() {
+  if (!currentEv) return;
+  const P = currentEv.particles;
+  const meanPt = Math.max(0.1, currentEv.event_record.mean_pt);
+  const M = Math.min(P.pt.length, MAX_PARTICLES);
+
+  parsedParticles = new Array(M);
+  let nv = 0;
+  maxPathLen = 0.5;
+
+  const isCloudOnly = geomMode === 'cloud_only';
+  uRayOp.value = isCloudOnly ? 0.0 : 0.86;
+  rayLines.visible = !isCloudOnly;
+
+  for (let i = 0; i < M; i++) {
+    const pt = P.pt[i];
+    const eta = P.eta[i];
+    const cosPhi = P.cos_phi[i];
+    const sinPhi = P.sin_phi[i];
+    const logPt = P.log_pt_ratio[i];
+    const q = P.q[i];
+    const sp = P.sp[i];
+    const m = P.mass[i];
+
+    const ch = Math.cosh(eta);
+    const sh = Math.sinh(eta);
+    // Unit 3D momentum direction u_hat = (cos(phi)/cosh(eta), sin(phi)/cosh(eta), tanh(eta))
+    const ux = cosPhi / ch;
+    const uy = sinPhi / ch;
+    const uz = sh / ch;
+
+    const pMag = pt * ch;
+    const E = Math.hypot(pMag, m);
+    const beta = pMag / Math.max(E, 1e-4);
+
+    // Determine target radial distance L in 3D display space
+    let L;
+    if (geomMode === 'rays_beta') {
+      L = R_REF * beta;
+    } else {
+      // Scale radial distance smoothly with pT / <pT> so high-pT particles stand out in 3D space
+      const ratio = pt / meanPt;
+      L = R_REF * (0.28 + 0.52 * Math.pow(Math.min(ratio, 4.5), 0.75));
+    }
+
+    const vFlight = geomMode === 'rays_beta' ? beta * V_EXPAND : V_EXPAND * (L / R_REF);
+    maxPathLen = Math.max(maxPathLen, L);
+
+    const vStart = nv;
+    for (let s = 0; s < SEGS_PER_RAY; s++) {
+      const f0 = s / SEGS_PER_RAY;
+      const f1 = (s + 1) / SEGS_PER_RAY;
+      const d0 = f0 * L;
+      const d1 = f1 * L;
+      const o = nv * 3;
+      rPos[o]     = ux * d0;
+      rPos[o + 1] = uy * d0;
+      rPos[o + 2] = uz * d0;
+      rPath[nv]   = d0;
+
+      rPos[o + 3] = ux * d1;
+      rPos[o + 4] = uy * d1;
+      rPos[o + 5] = uz * d1;
+      rPath[nv + 1] = d1;
+      nv += 2;
+    }
+
+    pTAttr.array[i] = L;
+    parsedParticles[i] = {
+      pt,
+      eta,
+      log_pt_ratio: logPt,
+      q,
+      sp,
+      m,
+      beta,
+      ux,
+      uy,
+      uz,
+      L,
+      vFlight,
+      vStart,
+      vCount: nv - vStart,
+    };
+  }
+
+  rayGeo.setDrawRange(0, isCloudOnly ? 0 : nv);
+  pointCloudMesh.count = M;
+  aPos.needsUpdate = true;
+  aPath.needsUpdate = true;
+  pTAttr.needsUpdate = true;
+
+  recolor();
+  updatePointCloudPositions(uT.value);
+}
+
+function updatePointCloudPositions(wavefrontR) {
+  if (!parsedParticles.length) return;
+  const M = parsedParticles.length;
+  const baseRadius = 0.028 * ptSizeMult * (M > 1200 ? 0.78 : M < 200 ? 1.35 : 1.0);
+
+  for (let i = 0; i < M; i++) {
+    const p = parsedParticles[i];
+    const curR = geomMode === 'cloud_only' ? p.L : Math.min(wavefrontR, p.L);
+    dummyPos.set(p.ux * curR, p.uy * curR, p.uz * curR);
+    const ptBoost = 0.75 + 0.35 * Math.min(p.pt, 2.5);
+    dummyScale.setScalar(baseRadius * ptBoost);
+    dummyMat.compose(dummyPos, dummyQuat, dummyScale);
+    pointCloudMesh.setMatrixAt(i, dummyMat);
+  }
+  pointCloudMesh.instanceMatrix.needsUpdate = true;
+}
+
+function recolor() {
+  if (!parsedParticles.length) return;
+  for (let i = 0; i < parsedParticles.length; i++) {
+    const p = parsedParticles[i];
+    const c = particleColor(p, colorMode);
+    for (let v = p.vStart; v < p.vStart + p.vCount; v++) {
+      rCol[v * 3]     = c.r;
+      rCol[v * 3 + 1] = c.g;
+      rCol[v * 3 + 2] = c.b;
+    }
+    pColAttr.array[i * 3]     = c.r;
+    pColAttr.array[i * 3 + 1] = c.g;
+    pColAttr.array[i * 3 + 2] = c.b;
+  }
+  aCol.needsUpdate = true;
+  pColAttr.needsUpdate = true;
+  updateLegend();
+}
+
+/* ================= HUD, Legend & Phase Updates ================= */
+function updateHUD() {
+  if (!currentEv) return;
+  const mc = currentEv.mc_record;
+  const er = currentEv.event_record;
+  const sc = currentEv.species_counts;
+
+  $('eyebrow').textContent = `MC ${mc.label.toFixed(2)} · ${mc.model_name}`;
+  $('beamLine').innerHTML = `${mc.system_tag} · E<sub>cm</sub> = ${mc.ecm} GeV · File: <code>${currentEv.file}</code>`;
+
+  $('sEv').textContent = `#${currentEv.event_idx.toLocaleString()}`;
+  $('sCent').textContent = `${er.centrality_pct.toFixed(1)}%`;
+  $('sMult').textContent = er.multiplicity.toLocaleString();
+  $('sMeanPt').textContent = er.mean_pt.toFixed(4);
+  $('sSumPt').textContent = er.sum_pt.toFixed(1);
+  $('sMeanEta').textContent = er.eta_mean.toFixed(4);
+  $('sPsi2').textContent = `${er.psi2_deg >= 0 ? '+' : ''}${er.psi2_deg.toFixed(1)}°`;
+  $('sSinCos').textContent = `${er.sin_psi2.toFixed(2)} / ${er.cos_psi2.toFixed(2)}`;
+  $('sB').textContent = er.b.toFixed(2);
+  $('sNpNc').textContent = `${Math.round(er.n_part)} / ${Math.round(er.n_coll)}`;
+  $('sSpecies').textContent = `${sc.pi} / ${sc.k} / ${sc.p}`;
+  $('sCharge').textContent = `${sc.pos} / ${sc.neg}`;
+
+  $('iEvIdx').value = currentEv.event_idx;
+  $('iEvIdx').max = currentEv.n_events - 1;
+
+  psi2Group.rotation.set(0, 0, er.psi2_rad);
+  psiLbl.v.set(
+    R_REF * 1.3 * Math.cos(er.psi2_rad),
+    R_REF * 1.3 * Math.sin(er.psi2_rad),
+    0
+  );
+  psiLbl.d.innerHTML = `<b>Ψ₂</b> · ${er.psi2_deg.toFixed(1)}°`;
+
+  $('phaseName').textContent = `Event #${currentEv.event_idx} (${er.multiplicity} particles)`;
+  $('phaseNote').textContent =
+    `Streamed point_cloud[${currentEv.event_idx}, :${er.multiplicity}, 5] (float16) — ` +
+    `⟨p_T⟩ = ${er.mean_pt.toFixed(3)} GeV/c, Σp_T = ${er.sum_pt.toFixed(1)} GeV/c, ` +
+    `π±:${sc.pi} K±:${sc.k} p/p̄:${sc.p}.`;
+}
+
+function updateLegend() {
+  const el = $('legend');
+  if (colorMode === 'pt') {
+    el.innerHTML = `<h2>Particle p<sub>T</sub> (GeV/c)</h2>
+      <div class="ramp" style="background:linear-gradient(90deg,${PT_COLS.map(c => '#' + c.getHexString(THREE.SRGBColorSpace)).join(',')})"></div>
+      <div class="ticks">${PT_STOPS.map((p, i) => `<span style="left:${i * 25}%">${i === 4 ? '≥4' : p}</span>`).join('')}</div>`;
+  } else if (colorMode === 'logpt') {
+    el.innerHTML = `<h2>Point-Cloud log(p<sub>T</sub> / ⟨p<sub>T</sub>⟩)</h2>
+      <div class="ramp" style="background:linear-gradient(90deg,${LOGPT_COLS.map(c => '#' + c.getHexString(THREE.SRGBColorSpace)).join(',')})"></div>
+      <div class="ticks">${LOGPT_STOPS.map((p, i) => `<span style="left:${i * 25}%">${p > 0 ? '+' + p : p}</span>`).join('')}</div>`;
+  } else if (colorMode === 'eta') {
+    el.innerHTML = `<h2>Pseudorapidity η</h2>
+      <div class="ramp" style="background:linear-gradient(90deg,${ETA_COLS.map(c => '#' + c.getHexString(THREE.SRGBColorSpace)).join(',')})"></div>
+      <div class="ticks">${ETA_STOPS.map((p, i) => `<span style="left:${i * 25}%">${p > 0 ? '+' + p : p}</span>`).join('')}</div>`;
+  } else if (colorMode === 'charge') {
+    el.innerHTML = `<h2>Charge sign(Q·log(1+m))</h2><div class="keys">
+      <span class="key"><i style="background:#ff7a59"></i>Q = +1</span>
+      <span class="key"><i style="background:#4fa3ff"></i>Q = −1</span></div>`;
+  } else {
+    el.innerHTML = `<h2>Hadron Species |Q·log(1+m)|</h2><div class="keys">
+      ${SP_INFO.map(s => `<span class="key"><i style="background:#${s.col.getHexString(THREE.SRGBColorSpace)}"></i>${s.name}</span>`).join('')}
+    </div>`;
+  }
+  el.insertAdjacentHTML(
+    'beforeend',
+    `<h2 class="sub">3D Representation</h2>
+     <div class="keys">
+       ${geomMode !== 'cloud_only' ? '<span class="key"><i style="background:#dfe6f3"></i>3D momentum ray</span>' : ''}
+       <span class="key"><i class="dot" style="background:#ffb24a"></i>Point-cloud node</span>
+       <span class="key muted">B = 0 T (straight trajectories)</span>
+     </div>`
+  );
+}
+
+/* ---------------- Floating 3D Labels ---------------- */
+const mkLabel = (n, sub, p, cls = '') => {
+  const d = document.createElement('div');
+  d.className = 'lbl ' + cls;
+  d.innerHTML = `<b>${n}</b>${sub ? ' · ' + sub : ''}`;
+  $('labels').appendChild(d);
+  return { d, v: new THREE.Vector3(...p) };
+};
+const rEtaLbl = R_REF * 0.75;
+const zEtaLbl = rEtaLbl * Math.sinh(1.0);
+const LABELS = [
+  ['+z', 'beam axis', [0, 0, 7.2]],
+  ['−z', 'beam axis', [0, 0, -7.2]],
+  ['z = 0', 'transverse plane', [0, R_REF * 1.04, 0]],
+  ['η = +1.0', 'acceptance cone', [0, rEtaLbl, zEtaLbl]],
+  ['η = −1.0', 'acceptance cone', [0, rEtaLbl, -zEtaLbl]],
+].map(([n, sub, p]) => mkLabel(n, sub, p));
+const psiLbl = mkLabel('Ψ₂', 'event plane', [R_REF * 1.3, 0, 0], 'psi');
+
+const pv = new THREE.Vector3();
+function placeLabels() {
+  const w = innerWidth, h = innerHeight;
+  const all = [...LABELS, ...(psi2Group.visible ? [psiLbl] : [])];
+  psiLbl.d.hidden = !psi2Group.visible;
+  for (const L of all) {
+    if (!gridGroup.visible && L !== psiLbl) {
+      L.d.hidden = true;
+      continue;
+    }
+    pv.copy(L.v).project(camera);
+    const vis = pv.z < 1 && Math.abs(pv.x) < 1.05 && Math.abs(pv.y) < 1.05;
+    L.d.hidden = !vis;
+    if (vis) {
+      L.d.style.transform = `translate(${(pv.x * 0.5 + 0.5) * w}px,${(-pv.y * 0.5 + 0.5) * h}px) translate(-50%,-100%)`;
+    }
+  }
+}
+
+/* ---------------- Camera View Presets ---------------- */
+const VIEWS = {
+  v3d:   [[14.5, 9.0, 16.5], [0, 0, 0]],
+  vBeam: [[0.001, 0.001, 22.0], [0, 0, 0]],
+  vSide: [[22.0, 0.001, 0.001], [0, 0, 0]],
+  vPsi2: [[0.001, 19.0, 7.5], [0, 0, 0]],
+};
+let tween = null;
+function setView(id, instant = false) {
+  const k = innerWidth / innerHeight < 1 ? 1.45 : 1.0;
+  let [pos, tgt] = VIEWS[id] || VIEWS.vSide;
+  if (id === 'vPsi2' && currentEv) {
+    const psi = currentEv.event_record.psi2_rad;
+    pos = [-Math.sin(psi) * 19.0, Math.cos(psi) * 19.0, 7.2];
+  }
+  const to = new THREE.Vector3(...pos).multiplyScalar(k);
+  const tt = new THREE.Vector3(...tgt);
+  for (const b of Object.keys(VIEWS)) $(b).setAttribute('aria-pressed', b === id);
+  if (instant) {
+    camera.position.copy(to);
+    controls.target.copy(tt);
+    return;
+  }
+  tween = { from: camera.position.clone(), to, t: 0, tf: controls.target.clone(), tt };
+}
+
+/* ================= Server Streaming API Calls ================= */
+async function loadCatalog() {
+  const res = await fetch('/api/files');
+  const data = await res.json();
+  filesCatalog = data.files || [];
+  if (!filesCatalog.length) {
+    fail('No HDF5 (.h5) files found by serve_h5_events.py.');
+    return;
+  }
+  $('iFile').innerHTML = filesCatalog
+    .map(f => `<option value="${f.id}">${f.system_tag} · MC ${f.label.toFixed(2)} (${f.id})</option>`)
+    .join('');
+  currentFile = filesCatalog[0].id;
+  await fetchEvent({ nav: 'random' });
+}
+
+let loadingEvent = false;
+async function fetchEvent({ nav = 'random', idx = null } = {}) {
+  if (loadingEvent || !currentFile) return;
+  loadingEvent = true;
+  try {
+    const allCent = $('cAllCent').checked;
+    const centVal = +$('iCent').value;
+    const cMin = allCent ? 0.0 : centVal / 100.0;
+    const cMax = allCent ? 1.0 : (centVal + 5.0) / 100.0;
+    const curIdx = currentEv ? currentEv.event_idx : 0;
+
+    const params = new URLSearchParams({
+      file: currentFile,
+      nav,
+      cur: String(curIdx),
+      c_min: cMin.toFixed(3),
+      c_max: cMax.toFixed(3),
+    });
+    if (idx !== null) params.set('idx', String(idx));
+
+    const res = await fetch(`/api/event?${params.toString()}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    currentEv = data;
+    rebuildGeometry();
+    updateHUD();
+    simT = 0;
+  } catch (err) {
+    $('phaseName').textContent = 'Stream Error';
+    $('phaseNote').textContent = String(err.message || err);
+  } finally {
+    loadingEvent = false;
+  }
+}
+
+/* ================= Theme & UI Wiring ================= */
+let lightTheme = false;
+function applyTheme(light) {
+  lightTheme = light;
+  document.documentElement.classList.toggle('light', light);
+  $('cLight').checked = light;
+  const bg = light ? 0xeef1f6 : 0x060a13;
+  renderer.setClearColor(bg, 1);
+  scene.fog.color.setHex(bg);
+  uLight.value = light ? 1 : 0;
+  for (const m of themed) {
+    m.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
+    m.needsUpdate = true;
+  }
+  for (const m of lineMats) {
+    m.color.copy(m.userData.base.color).multiplyScalar(light ? 0.55 : 1);
+    m.opacity = Math.min(1, m.userData.base.opacity * (light ? 1.7 : 1));
+  }
+}
+
+$('hudToggle').onclick = () => {
+  const c = $('hud').classList.toggle('collapsed');
+  $('hudToggle').setAttribute('aria-expanded', !c);
+};
+$('ctlToggle').onclick = () => {
+  const c = $('controls').classList.toggle('collapsed');
+  $('ctlToggle').setAttribute('aria-expanded', !c);
+};
+
+$('iFile').onchange = e => {
+  currentFile = e.target.value;
+  fetchEvent({ nav: 'random' });
+};
+$('bRandom').onclick = () => fetchEvent({ nav: 'random' });
+$('bPrev').onclick = () => fetchEvent({ nav: 'prev' });
+$('bNext').onclick = () => fetchEvent({ nav: 'next' });
+$('iEvIdx').onchange = e => fetchEvent({ nav: 'exact', idx: +e.target.value });
+
+$('bReplay').onclick = () => { simT = 0; };
+$('bPause').onclick = () => {
+  paused = !paused;
+  $('bPause').textContent = paused ? 'Play' : 'Pause';
+  $('bPause').setAttribute('aria-pressed', paused);
+};
+$('cLight').onchange = e => applyTheme(e.target.checked);
+
+function updateCentLabel() {
+  const allCent = $('cAllCent').checked;
+  $('iCent').disabled = allCent;
+  if (allCent) {
+    $('oCent').textContent = '0–100%';
+  } else {
+    const v = +$('iCent').value;
+    $('oCent').textContent = `${v}–${v + 5}%`;
+  }
+}
+$('cAllCent').onchange = () => { updateCentLabel(); fetchEvent({ nav: 'random' }); };
+$('iCent').oninput = updateCentLabel;
+$('iCent').onchange = () => fetchEvent({ nav: 'random' });
+
+$('iColor').onchange = e => { colorMode = e.target.value; recolor(); };
+$('iGeom').onchange = e => {
+  geomMode = e.target.value;
+  rebuildGeometry();
+  simT = 0;
+};
+$('iPtSize').oninput = e => {
+  ptSizeMult = +e.target.value;
+  $('oPtSize').textContent = ptSizeMult.toFixed(1) + '×';
+  updatePointCloudPositions(uT.value);
+};
+$('iSpeed').oninput = e => {
+  speed = +e.target.value;
+  $('oSpeed').textContent = speed.toFixed(1) + '×';
+};
+
+$('cGrid').onchange = e => { gridGroup.visible = e.target.checked; };
+$('cPsi2').onchange = e => { psi2Group.visible = e.target.checked; };
+$('cLbl').onchange = e => { $('labels').hidden = !e.target.checked; };
+$('cLoop').onchange = e => { autoLoop = e.target.checked; };
+$('cRot').onchange = e => { controls.autoRotate = e.target.checked; };
+
+for (const id of Object.keys(VIEWS)) $(id).onclick = () => setView(id);
+
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.code === 'Space') { e.preventDefault(); $('bPause').click(); }
+  if (e.key === 'n' || e.key === 'N') fetchEvent({ nav: 'random' });
+  if (e.key === 'ArrowRight') fetchEvent({ nav: 'next' });
+  if (e.key === 'ArrowLeft') fetchEvent({ nav: 'prev' });
+  if (e.key === 'r' || e.key === 'R') { simT = 0; }
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+/* ---------------- Screenshot Composer ---------------- */
+let shotReq = null;
+function saveLocally(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function composeShot(done) {
+  const src = renderer.domElement;
+  const c = document.createElement('canvas');
+  c.width = src.width;
+  c.height = src.height;
+  const g = c.getContext('2d');
+  g.drawImage(src, 0, 0);
+  if (currentEv) {
+    const mc = currentEv.mc_record;
+    const er = currentEv.event_record;
+    const k = c.width / innerWidth;
+    const pad = 18 * k;
+    const css = getComputedStyle(document.documentElement);
+    g.font = `600 ${22 * k}px 'Barlow Condensed', 'Arial Narrow', sans-serif`;
+    g.fillStyle = css.getPropertyValue('--ink').trim();
+    g.textBaseline = 'bottom';
+    g.fillText(`${mc.system_tag} · MC ${mc.label.toFixed(2)} (${mc.model_name})`, pad, c.height - pad - 18 * k);
+    g.font = `400 ${12 * k}px 'IBM Plex Mono', monospace`;
+    g.fillStyle = css.getPropertyValue('--muted').trim();
+    g.fillText(
+      `Event #${currentEv.event_idx} · centrality ${er.centrality_pct.toFixed(1)}% · M = ${er.multiplicity} · ⟨pT⟩ = ${er.mean_pt.toFixed(3)} GeV/c · ΣpT = ${er.sum_pt.toFixed(1)} GeV/c · Ψ₂ = ${er.psi2_deg.toFixed(1)}°`,
+      pad,
+      c.height - pad
+    );
+  }
+  c.toBlob(done, 'image/png');
+}
+$('bShot').onclick = () => {
+  const b = $('bShot');
+  shotReq = blob => {
+    if (!blob) return;
+    const evId = currentEv ? currentEv.event_idx : 0;
+    saveLocally(blob, `h5-event-${evId}.png`);
+    b.textContent = 'Saved';
+    setTimeout(() => { b.textContent = 'Save screenshot'; }, 1600);
+  };
+};
+
+function fail(msg) {
+  const d = document.createElement('div');
+  d.id = 'fail';
+  d.textContent = msg;
+  app.prepend(d);
+  $('phaseName').textContent = 'Error';
+  $('phaseNote').textContent = msg;
+}
+
+/* ================= Main Render Loop ================= */
+setView('vSide', true);
+updateLegend();
+await loadCatalog();
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (!paused) simT += dt * speed;
+
+  const wavefrontR = simT * V_EXPAND;
+  uT.value = wavefrontR;
+  updatePointCloudPositions(wavefrontR);
+
+  if (autoLoop && !paused && wavefrontR > maxPathLen + 3.2) {
+    fetchEvent({ nav: 'random' });
+  }
+
+  if (tween) {
+    tween.t = Math.min(1, tween.t + dt / 0.85);
+    const e = tween.t < 0.5 ? 2 * tween.t * tween.t : 1 - Math.pow(-2 * tween.t + 2, 2) / 2;
+    camera.position.lerpVectors(tween.from, tween.to, e);
+    controls.target.lerpVectors(tween.tf, tween.tt, e);
+    if (tween.t >= 1) tween = null;
+  }
+
+  controls.update();
+  if (!$('labels').hidden) placeLabels();
+  if (post && !lightTheme) post.render();
+  else renderer.render(scene, camera);
+
+  if (shotReq) {
+    const r = shotReq;
+    shotReq = null;
+    composeShot(r);
+  }
+});
+</script>
+</body>
+</html>
