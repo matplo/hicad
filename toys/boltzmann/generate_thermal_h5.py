@@ -26,7 +26,7 @@ HDF5 Schema per file:
       [1] sin(phi)
       [2] log(pT / mean_pT)
       [3] Q * log(1 + mass)
-      [4] eta_i / eta_mean
+      [4] eta_i - eta_mean
 """
 
 from __future__ import annotations
@@ -285,7 +285,7 @@ def generate_dataset_for_config(
             "sin(phi)",
             "log(pT/mean_pT)",
             "Q * log(1 + mass)",
-            "eta_i / eta_mean",
+            "eta_i - eta_mean",
         ]
 
         # Generate particles batch by batch in vectorized fashion
@@ -346,15 +346,9 @@ def generate_dataset_for_config(
                 np.float16
             )
 
-            # Guard against tiny eta_mean denominator so float16 never overflows to Inf
-            eta_denom = eta_mean[ev_idx]
-            eta_denom_safe = np.where(
-                np.abs(eta_denom) < 1e-4,
-                np.where(eta_denom >= 0.0, 1e-4, -1e-4),
-                eta_denom,
-            )
-            eta_ratio = eta / eta_denom_safe
-            eta_ratio_f16 = np.clip(eta_ratio, -f16_max, f16_max).astype(np.float16)
+            # Pseudorapidity relative to event mean: eta_i - eta_mean
+            eta_diff = eta - eta_mean[ev_idx]
+            eta_diff_f16 = np.clip(eta_diff, -f16_max, f16_max).astype(np.float16)
 
             # Assemble 3D padded batch array
             pc_batch = np.zeros((b_n, max_m, 5), dtype=np.float16)
@@ -362,7 +356,7 @@ def generate_dataset_for_config(
             pc_batch[ev_idx, slot_idx, 1] = sin_phi
             pc_batch[ev_idx, slot_idx, 2] = log_pt_ratio_f16
             pc_batch[ev_idx, slot_idx, 3] = q_log_m
-            pc_batch[ev_idx, slot_idx, 4] = eta_ratio_f16
+            pc_batch[ev_idx, slot_idx, 4] = eta_diff_f16
 
             pc_ds[start:end, :, :] = pc_batch
 

@@ -58,7 +58,7 @@ For each active particle $i \in [0, M-1]$ in an event, the server unpacks the 5 
 | `0`, `1` | $\cos\phi_i,\; \sin\phi_i$ | Azimuthal direction $\hat{n}_{\perp,i} = (\cos\phi_i, \sin\phi_i)$ (re-normalized on unit circle) |
 | `2` | $\ln(p_{T,i} / \langle p_T \rangle_{\text{ev}})$ | Transverse momentum $p_{T,i} = \langle p_T \rangle_{\text{ev}} \exp(\text{col}_2)$ $[\text{GeV}/c]$ |
 | `3` | $Q_i \ln(1 + m_i)$ | Charge $Q_i = \text{sign}(\text{col}_3) \in \{-1, +1\}$ and species $\pi^\pm, K^\pm, p/\bar{p}$ via nearest $\ln(1+m)$ lookup |
-| `4` | $\eta_i / \langle \eta \rangle_{\text{ev}}$ | Pseudorapidity $\eta_i = \langle \eta \rangle_{\text{ev}} \cdot \text{col}_4$ |
+| `4` | $\eta_i - \langle \eta \rangle_{\text{ev}}$ | Pseudorapidity $\eta_i = \text{col}_4 + \langle \eta \rangle_{\text{ev}}$ |
 
 In 3D scene coordinates (where the $z$-axis is the beam axis and $(x, y)$ is the transverse plane):
 - **3D unit direction**:

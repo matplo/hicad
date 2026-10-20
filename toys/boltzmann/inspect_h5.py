@@ -85,7 +85,7 @@ def inspect_file(path: str) -> None:
             f"   Event 0 (M={m0}) sample particle 0: "
             f"cos(phi)={active0[0, 0]:.3f}, sin(phi)={active0[0, 1]:.3f}, "
             f"log(pT/<pT>)={active0[0, 2]:.3f}, Q*log(1+m)={active0[0, 3]:.3f}, "
-            f"eta/<eta>={active0[0, 4]:.3f}"
+            f"eta-<eta>={active0[0, 4]:.3f}"
         )
         print("   Validation checks (dtype, finite values, zero-padding): PASSED\n")
 

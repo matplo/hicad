@@ -198,7 +198,7 @@ class H5DatasetCatalog:
                 pc_slice = h5f["point_cloud"][chosen_idx, :mult, :].astype(np.float32)
 
         # Unpack point_cloud columns:
-        # [0] cos(phi), [1] sin(phi), [2] log(pT/mean_pT), [3] Q*log(1+mass), [4] eta_i/eta_mean
+        # [0] cos(phi), [1] sin(phi), [2] log(pT/mean_pT), [3] Q*log(1+mass), [4] eta_i - eta_mean
         cos_phi = pc_slice[:, 0]
         sin_phi = pc_slice[:, 1]
         # Re-normalize unit circle slightly to remove float16 rounding drift
@@ -219,8 +219,8 @@ class H5DatasetCatalog:
         sp_idx = np.argmin(np.abs(abs_qlogm[:, None] - SPECIES_ABS_QLOGM[None, :]), axis=1).astype(np.int32)
         mass = SPECIES_MASSES[sp_idx]
 
-        eta_ratio = pc_slice[:, 4]
-        eta = np.clip(eta_mean * eta_ratio, -2.5, 2.5)
+        eta_diff = pc_slice[:, 4]
+        eta = np.clip(eta_diff + eta_mean, -2.5, 2.5)
 
         n_pi = int(np.sum(sp_idx == 0))
         n_k = int(np.sum(sp_idx == 1))
@@ -269,7 +269,7 @@ class H5DatasetCatalog:
                 "log_pt_ratio": np.round(log_pt_ratio, 4).tolist(),
                 "q_log_m": np.round(q_log_m, 4).tolist(),
                 "eta": np.round(eta, 4).tolist(),
-                "eta_ratio": np.round(eta_ratio, 3).tolist(),
+                "eta_diff": np.round(eta_diff, 4).tolist(),
                 "q": q.tolist(),
                 "sp": sp_idx.tolist(),
                 "mass": np.round(mass, 4).tolist(),
@@ -302,7 +302,9 @@ def make_handler(catalog: H5DatasetCatalog, html_path: str):
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(raw)))
-            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
             self.end_headers()
             self.wfile.write(raw)
 

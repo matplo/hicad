@@ -61,7 +61,7 @@ Zero-padded 3D array (`lzf` compressed by default). For an event $e$ with multip
 | `1` | `sin(phi)` | `float16` | $\phi_i = \operatorname{atan2}(\text{col}_1, \text{col}_0)$ | Sine of particle azimuthal angle $\phi_i \in [-\pi, \pi)$ |
 | `2` | `log(pT/mean_pT)` | `float16` | $p_{T,i} = \langle p_T \rangle_e \cdot \exp(\text{col}_2)$ | Log-ratio of particle $p_{T,i}$ to event $\langle p_T \rangle_e$ |
 | `3` | `Q * log(1 + mass)` | `float16` | $\|Q\ln(1+m)\| \in \{0.1307, 0.4012, 0.6618\}$ | Charge $Q_i \in \{\pm 1\}$ times $\ln(1 + m_i\,[\text{GeV}/c^2])$ for $\pi^\pm, K^\pm, p/\bar{p}$ |
-| `4` | `eta_i / eta_mean` | `float16` | $\eta_i = \langle \eta \rangle_e \cdot \text{col}_4$ | Particle pseudorapidity $\eta_i \in (-1, 1)$ normalized by event $\langle \eta \rangle_e$ |
+| `4` | `eta_i - eta_mean` | `float16` | $\eta_i = \text{col}_4 + \langle \eta \rangle_e$ | Particle pseudorapidity $\eta_i \in (-1, 1)$ relative to event $\langle \eta \rangle_e$ |
 
 ---
 

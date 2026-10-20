@@ -98,16 +98,11 @@ def reconstruct_particles_from_h5(
         sin_phi = pc[:, 1]
         log_pt_ratio = pc[:, 2]
         qlogm = pc[:, 3]
-        eta_ratio = pc[:, 4]
+        eta_diff = pc[:, 4]
 
         pt = mean_pt * np.exp(log_pt_ratio)
         phi = np.arctan2(sin_phi, cos_phi)
-        eta_denom = (
-            eta_mean
-            if abs(eta_mean) >= 1e-4
-            else (1e-4 if eta_mean >= 0 else -1e-4)
-        )
-        eta = eta_ratio * eta_denom
+        eta = eta_diff + eta_mean
 
         pt_list.append(pt)
         eta_list.append(eta)
@@ -678,7 +673,7 @@ def main() -> None:
                 "- `[0]`: $\\cos(\\phi_i)$ and `[1]`: $\\sin(\\phi_i) \\implies \\phi_i = \\operatorname{atan2}(\\sin\\phi_i, \\cos\\phi_i)$\n"
                 "- `[2]`: $\\ln(p_{T,i} / \\langle p_T \\rangle_e) \\implies p_{T,i} = \\langle p_T \\rangle_e \\cdot \\exp(\\text{pc}[e, i, 2])$\n"
                 "- `[3]`: $Q_i \\ln(1 + m_i)$\n"
-                "- `[4]`: $\\eta_i / \\langle \\eta \\rangle_e \\implies \\eta_i = \\langle \\eta \\rangle_e \\cdot \\text{pc}[e, i, 4]$"
+                "- `[4]`: $\\eta_i - \\langle \\eta \\rangle_e \\implies \\eta_i = \\text{pc}[e, i, 4] + \\langle \\eta \\rangle_e$"
             ],
         },
         {
@@ -712,8 +707,7 @@ def main() -> None:
                 "        pc = pc_sub[i, :m, :].astype(np.float32)\n"
                 "        pt = mean_pt * np.exp(pc[:, 2])\n"
                 "        phi = np.arctan2(pc[:, 1], pc[:, 0])\n"
-                "        eta_denom = eta_mean if abs(eta_mean) >= 1e-4 else (1e-4 if eta_mean >= 0 else -1e-4)\n"
-                "        eta = pc[:, 4] * eta_denom\n\n"
+                "        eta = pc[:, 4] + eta_mean\n\n"
                 "        pt_list.append(pt)\n"
                 "        eta_list.append(eta)\n"
                 "        phi_list.append(phi)\n"
@@ -919,7 +913,7 @@ def main() -> None:
     summary_md = (
         "### Q&A\n"
         "- **Do the reconstructed $p_T$, $\\eta$, and $\\phi$ distributions from the `float16` point cloud match the generated physics settings?**\n"
-        "  Yes. Unpacking $\\ln(p_T/\\langle p_T \\rangle)$, $\\cos\\phi$, $\\sin\\phi$, and $\\eta_i/\\langle \\eta \\rangle$ from `point_cloud` (`float16`) reproduces the uniform pseudorapidity density $dP/d\\eta = 0.50$ on $|\\eta| < 1.0$, the isotropic azimuthal density $dP/d\\phi = 1/(2\\pi) \\approx 0.1592\\text{ rad}^{-1}$ on $[-\\pi, \\pi]$, and the exact event-record mean transverse momenta ($0.6802\\text{ GeV}/c$ at Top LHC, $0.5600\\text{ GeV}/c$ at Top RHIC, and $0.4205\\text{ GeV}/c$ at RHIC BES $9.2\\text{ GeV}$).\n"
+        "  Yes. Unpacking $\\ln(p_T/\\langle p_T \\rangle)$, $\\cos\\phi$, $\\sin\\phi$, and $\\eta_i - \\langle \\eta \\rangle$ from `point_cloud` (`float16`) reproduces the uniform pseudorapidity density $dP/d\\eta = 0.50$ on $|\\eta| < 1.0$, the isotropic azimuthal density $dP/d\\phi = 1/(2\\pi) \\approx 0.1592\\text{ rad}^{-1}$ on $[-\\pi, \\pi]$, and the exact event-record mean transverse momenta ($0.6802\\text{ GeV}/c$ at Top LHC, $0.5600\\text{ GeV}/c$ at Top RHIC, and $0.4205\\text{ GeV}/c$ at RHIC BES $9.2\\text{ GeV}$).\n"
         "- **Does fitting the $p_T$ spectrum with a Boltzmann distribution reproduce the input parameters?**\n"
         "  Yes. The MLE Boltzmann estimator ($\\hat{T}_{\\mathrm{MLE}} = \\langle p_T \\rangle / 2$) reproduces the exact target effective temperatures ($0.3401\\text{ GeV}$, $0.2800\\text{ GeV}$, $0.2103\\text{ GeV}$). Furthermore, fitting each hadron species ($\\pi^\\pm, K^\\pm, p/\\bar{p}$) individually with the 2D thermal Boltzmann density $dP_s/dp_T = A(p_T/T_s^2)\\exp(-p_T/T_s)$ recovers every species' input effective temperature $T_s$ to within $<0.3\\%$, and their species-weighted mean $\\sum_s f_s (2 T_s)$ reproduces the exact target central $\\langle p_T \\rangle$ ($0.6811\\text{ GeV}/c$, $0.5614\\text{ GeV}/c$, and $0.4222\\text{ GeV}/c$).\n\n"
         "### Data Analysis Key Findings\n"

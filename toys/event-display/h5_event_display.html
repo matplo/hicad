@@ -148,7 +148,7 @@ input[type=checkbox]{accent-color:var(--amber)}
       <ul>
         <li><i>mc_record</i> (<code>float32[2]</code>): <code>[Ecm, Label]</code> — collision energy √s<sub>NN</sub> and generator code (<code>0.0X</code> Vanilla Thermal, <code>0.1X</code> UrQMD, <code>0.2X</code> Angantyr, <code>0.3X</code> JEWEL, <code>0.4X</code> HIJING, <code>0.5X</code> AMPT).</li>
         <li><i>event_record</i> (<code>float32[N, 10]</code>): <code>[centrality, Multiplicity, b, N_part, N_coll, sin(Ψ₂), cos(Ψ₂), Mean_pT, Sum_pT, Eta_mean]</code>.</li>
-        <li><i>point_cloud</i> (<code>float16[N, max_M, 5]</code>): <code>[cos(φ), sin(φ), log(p_T/⟨p_T⟩), Q·log(1+m), η_i/⟨η⟩]</code>.</li>
+        <li><i>point_cloud</i> (<code>float16[N, max_M, 5]</code>): <code>[cos(φ), sin(φ), log(p_T/⟨p_T⟩), Q·log(1+m), η_i − ⟨η⟩]</code>.</li>
         <li><i>3D kinematics</i>: Free-streaming straight momentum rays (B = 0, no detectors) along <b>û</b><sub>i</sub> = (cos φ<sub>i</sub> / cosh η<sub>i</sub>, sin φ<sub>i</sub> / cosh η<sub>i</sub>, tanh η<sub>i</sub>).</li>
       </ul>
     </details>
@@ -418,21 +418,20 @@ const ptMat = new THREE.MeshBasicNodeMaterial({
   themed.push(ptMat);
 }
 const pointCloudMesh = new THREE.InstancedMesh(ptGeo, ptMat, MAX_PARTICLES);
-pointCloudMesh.count = 0;
+pointCloudMesh.count = MAX_PARTICLES;
 pointCloudMesh.frustumCulled = false;
 pointCloudMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+{
+  const zeroMat = new THREE.Matrix4().makeScale(0, 0, 0);
+  for (let i = 0; i < MAX_PARTICLES; i++) {
+    pointCloudMesh.setMatrixAt(i, zeroMat);
+  }
+  pointCloudMesh.instanceMatrix.needsUpdate = true;
+}
 scene.add(pointCloudMesh);
 
-/* ---------------- Post-Processing Bloom ---------------- */
+/* ---------------- Post-Processing Bloom (initialized after initial event & camera setup) ---------------- */
 let post = null;
-try {
-  post = new THREE.PostProcessing(renderer);
-  const sp = pass(scene, camera);
-  const col = sp.getTextureNode('output');
-  post.outputNode = col.add(bloom(col, 0.6, 0.35, 0.15));
-} catch (e) {
-  post = null;
-}
 
 /* ================= Colour Palettes (Conserved from visual-eds) ================= */
 const PT_STOPS = [0, 0.4, 1.0, 2.0, 4.0];
@@ -574,8 +573,19 @@ function rebuildGeometry() {
     };
   }
 
+  for (let v = nv; v < MAX_RAY_VERTS; v++) {
+    const o = v * 3;
+    rPos[o] = 0;
+    rPos[o + 1] = 0;
+    rPos[o + 2] = 0;
+    rPath[v] = 1e6;
+  }
+  for (let i = M; i < MAX_PARTICLES; i++) {
+    pTAttr.array[i] = 1e6;
+  }
+
   rayGeo.setDrawRange(0, isCloudOnly ? 0 : nv);
-  pointCloudMesh.count = M;
+  pointCloudMesh.count = MAX_PARTICLES;
   aPos.needsUpdate = true;
   aPath.needsUpdate = true;
   pTAttr.needsUpdate = true;
@@ -584,6 +594,7 @@ function rebuildGeometry() {
   updatePointCloudPositions(uT.value);
 }
 
+const zeroScaleMat = new THREE.Matrix4().makeScale(0, 0, 0);
 function updatePointCloudPositions(wavefrontR) {
   if (!parsedParticles.length) return;
   const M = parsedParticles.length;
@@ -591,12 +602,15 @@ function updatePointCloudPositions(wavefrontR) {
 
   for (let i = 0; i < M; i++) {
     const p = parsedParticles[i];
-    const curR = geomMode === 'cloud_only' ? p.L : Math.min(wavefrontR, p.L);
+    const curR = geomMode === 'cloud_only' ? p.L : Math.min(Math.max(wavefrontR, 0.02), p.L);
     dummyPos.set(p.ux * curR, p.uy * curR, p.uz * curR);
     const ptBoost = 0.75 + 0.35 * Math.min(p.pt, 2.5);
     dummyScale.setScalar(baseRadius * ptBoost);
     dummyMat.compose(dummyPos, dummyQuat, dummyScale);
     pointCloudMesh.setMatrixAt(i, dummyMat);
+  }
+  for (let i = M; i < MAX_PARTICLES; i++) {
+    pointCloudMesh.setMatrixAt(i, zeroScaleMat);
   }
   pointCloudMesh.instanceMatrix.needsUpdate = true;
 }
@@ -737,7 +751,7 @@ function placeLabels() {
 const VIEWS = {
   v3d:   [[14.5, 9.0, 16.5], [0, 0, 0]],
   vBeam: [[0.001, 0.001, 22.0], [0, 0, 0]],
-  vSide: [[22.0, 0.001, 0.001], [0, 0, 0]],
+  vSide: [[22.0, 0.4, 0.001], [0, 0, 0]],
   vPsi2: [[0.001, 19.0, 7.5], [0, 0, 0]],
 };
 let tween = null;
@@ -752,8 +766,13 @@ function setView(id, instant = false) {
   const tt = new THREE.Vector3(...tgt);
   for (const b of Object.keys(VIEWS)) $(b).setAttribute('aria-pressed', b === id);
   if (instant) {
+    tween = null;
     camera.position.copy(to);
     controls.target.copy(tt);
+    camera.lookAt(tt);
+    controls.update();
+    camera.updateProjectionMatrix();
+    camera.updateMatrixWorld();
     return;
   }
   tween = { from: camera.position.clone(), to, t: 0, tf: controls.target.clone(), tt };
@@ -761,7 +780,7 @@ function setView(id, instant = false) {
 
 /* ================= Server Streaming API Calls ================= */
 async function loadCatalog() {
-  const res = await fetch('/api/files');
+  const res = await fetch('/api/files', { cache: 'no-store' });
   const data = await res.json();
   filesCatalog = data.files || [];
   if (!filesCatalog.length) {
@@ -795,14 +814,15 @@ async function fetchEvent({ nav = 'random', idx = null } = {}) {
     });
     if (idx !== null) params.set('idx', String(idx));
 
-    const res = await fetch(`/api/event?${params.toString()}`);
+    const res = await fetch(`/api/event?${params.toString()}`, { cache: 'no-store' });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
     currentEv = data;
+    simT = 0;
+    uT.value = 0.02;
     rebuildGeometry();
     updateHUD();
-    simT = 0;
   } catch (err) {
     $('phaseName').textContent = 'Stream Error';
     $('phaseNote').textContent = String(err.message || err);
@@ -970,9 +990,30 @@ function fail(msg) {
 }
 
 /* ================= Main Render Loop ================= */
+colorMode = $('iColor').value;
+geomMode = $('iGeom').value;
+ptSizeMult = +$('iPtSize').value || 1.0;
+speed = +$('iSpeed').value || 2.5;
+autoLoop = $('cLoop').checked;
+controls.autoRotate = $('cRot').checked;
+updateCentLabel();
+
 setView('vSide', true);
 updateLegend();
 await loadCatalog();
+
+camera.aspect = innerWidth / innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(innerWidth, innerHeight);
+
+try {
+  post = new THREE.PostProcessing(renderer);
+  const sp = pass(scene, camera);
+  const col = sp.getTextureNode('output');
+  post.outputNode = col.add(bloom(col, 0.6, 0.35, 0.15));
+} catch (e) {
+  post = null;
+}
 
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
