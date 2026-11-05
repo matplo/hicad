@@ -1,0 +1,157 @@
+{
+  "python_tests": {
+    "command": "python -m unittest discover -s toys/event-display/clump_explorer/tests -v",
+    "passed": 45
+  },
+  "javascript_tests": {
+    "command": "node --test toys/event-display/clump_explorer/tests/test_browser_logic.mjs",
+    "passed": 11
+  },
+  "preservation": {
+    "baseline": "implementation_baseline.json",
+    "pre_existing_files": 21,
+    "unchanged": 21
+  },
+  "startup": {
+    "cwd_independent_source_only": true,
+    "legacy_and_new_servers_coexist": true
+  },
+  "benchmark": {
+    "samples_per_case": 30,
+    "warmups": 2,
+    "mode": "native",
+    "numpy_version": "2.5.4",
+    "includes": "uncached generation, response preparation, cache accounting and JSON serialization; exact diagnostics deferred",
+    "source_only": {
+      "background_particles": 0,
+      "p50_ms": 0.9203545050695539,
+      "p95_ms": 1.253200302016921
+    },
+    "bes": {
+      "background_particles": 50,
+      "p50_ms": 6.733999529387802,
+      "p95_ms": 7.40343939687591
+    },
+    "central_lhc": {
+      "background_particles": 1823,
+      "p50_ms": 34.438270988175645,
+      "p95_ms": 37.27076612995006
+    }
+  },
+  "unverified": [
+    "Live desktop and narrow browser layout including help modal",
+    "Live keyboard interaction",
+    "Canvas frame latency",
+    "WebGPU execution and GPU resource cleanup"
+  ],
+  "browser_blocker": "Computer-use inventory reported no browsers: browser access host unavailable; native pipe startup failed.",
+  "frontend_changes": [
+    "Default red clump / green background proton truth coloring",
+    "Committed recipe download beside Apply and under Downloads",
+    "Replay on change checkbox off by default; manual Canvas/GPU replay",
+    "Help modal with header and beta shortcuts; modal markup validated",
+    "Pinned-background updates verified for n, temperature and beta"
+  ],
+  "canonical_backgrounds": {
+    "thermal_law": "massive_canonical_boltzmann_3d_v1",
+    "shared_sampler_parity": "exact for matched proton mass, temperature and streams",
+    "previous_proton_rng_samples": "bit-for-bit unchanged at T=0.001, 0.1, 0.5 GeV",
+    "legacy_data_unchanged": true,
+    "all_generated_rows_finite_and_padding_zero": true,
+    "central_packed_scenarios_and_exact_diagnostics": "passed for both variants in all three settings",
+    "datasets": [
+      {
+        "file": "toys/boltzmann/canonical-output/canonical_thermal_events_bes_9p2GeV.h5",
+        "events": 1000,
+        "temperature_mev": 100,
+        "mean_emitted": 24.572,
+        "mean_accepted": 18.732,
+        "bytes": 766136
+      },
+      {
+        "file": "toys/boltzmann/canonical-output/canonical_thermal_events_lhc_5020GeV.h5",
+        "events": 1000,
+        "temperature_mev": 100,
+        "mean_emitted": 540.597,
+        "mean_accepted": 411.566,
+        "bytes": 11139077
+      },
+      {
+        "file": "toys/boltzmann/canonical-output/canonical_thermal_events_rhic_200GeV.h5",
+        "events": 1000,
+        "temperature_mev": 100,
+        "mean_emitted": 210.388,
+        "mean_accepted": 160.277,
+        "bytes": 4576602
+      }
+    ]
+  },
+  "event_mixing": {
+    "policy": "independent-source-donors-v1",
+    "same_clump_pairs": 0,
+    "old_variants_unchanged": true,
+    "checked_canonical_backgrounds": [
+      {
+        "dataset": "canonical_thermal_events_bes_9p2GeV.h5",
+        "source_accepted": {
+          "shared_boost": 6,
+          "azimuth_decohered": 6,
+          "event_mixed": 6
+        },
+        "recipe_snapshot_diagnostics": "passed"
+      },
+      {
+        "dataset": "canonical_thermal_events_lhc_5020GeV.h5",
+        "source_accepted": {
+          "shared_boost": 6,
+          "azimuth_decohered": 6,
+          "event_mixed": 6
+        },
+        "recipe_snapshot_diagnostics": "passed"
+      },
+      {
+        "dataset": "canonical_thermal_events_rhic_200GeV.h5",
+        "source_accepted": {
+          "shared_boost": 6,
+          "azimuth_decohered": 6,
+          "event_mixed": 6
+        },
+        "recipe_snapshot_diagnostics": "passed"
+      }
+    ],
+    "ensemble_check": {
+      "source_events": 200,
+      "daughters_per_event": 32,
+      "temperature_gev": 0.03,
+      "beta": 0.75,
+      "direction": "isotropic_3d",
+      "first_daughter_KS_pt": 0.045,
+      "first_daughter_KS_y": 0.105,
+      "mean_distinct_pair_y_product_shared": 0.2557363450824271,
+      "mean_distinct_pair_y_product_mixed": 0.0005036837028713181
+    }
+  },
+  "viewport_and_optional_controls": {
+    "default_variants": [
+      "shared_boost"
+    ],
+    "optional_checkboxes_unchecked": true,
+    "fit_includes_guide_cube_for_narrow_and_wide_aspects": "passed CPU geometry test",
+    "clip_counts_distinguish_lab_rejections": "passed CPU logic test",
+    "acceptance_regression": {
+      "seed": "42",
+      "daughter": "c0:d4",
+      "accepted_at_beta": [
+        0.17,
+        0.69
+      ],
+      "rejected_at_beta": [
+        0.18,
+        0.4,
+        0.68
+      ],
+      "rest_p4_and_pz_preserved": true
+    },
+    "live_gpu_inspection": "unavailable: browser access host could not connect"
+  }
+}

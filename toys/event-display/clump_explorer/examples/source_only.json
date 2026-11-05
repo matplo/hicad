@@ -1,0 +1,57 @@
+{
+  "schema_version": "hicad-clump-explorer-1",
+  "request_id": 1,
+  "realization": {
+    "root_seed": "42",
+    "clump_revision": 0,
+    "direction_revision": 0,
+    "control_revision": 0
+  },
+  "background": {
+    "provider": "none"
+  },
+  "clump_config": {
+    "schema_version": "hicad-clump-spec-1",
+    "enabled": true,
+    "signal_probability": 1,
+    "injection_mode": "add",
+    "source_frame_mode": "canonical_source",
+    "species": "p",
+    "clumps_per_injected_event": {
+      "distribution": "fixed",
+      "value": 1
+    },
+    "emitted_multiplicity": {
+      "distribution": "fixed",
+      "value": 8
+    },
+    "temperature_gev": {
+      "distribution": "fixed",
+      "value": 0.1
+    },
+    "boost_speed": {
+      "distribution": "fixed",
+      "value": 0.4
+    },
+    "boost_direction": "transverse",
+    "acceptance": {
+      "eta_max": 1,
+      "pt_min_gev": 0,
+      "pt_max_gev": null,
+      "azimuth": "full"
+    },
+    "variants": [
+      "shared_boost"
+    ],
+    "shuffle_particles": true,
+    "write_truth": true,
+    "write_observed_p4_float32": true,
+    "overwrite": false
+  },
+  "observation_mode": "native",
+  "diagnostics": {
+    "enabled": true,
+    "pair_species": "positive_proton",
+    "binning_id": "proton_clump_diagnostics_v1"
+  }
+}

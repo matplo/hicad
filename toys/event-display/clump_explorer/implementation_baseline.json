@@ -1,0 +1,23 @@
+{
+  ".DS_Store": "d65165279105ca6773180500688df4bdc69a2c7b771752f0a46ef120b7fd8ec3",
+  "LICENSE": "15dbdaa5001250adc9fbbccaa2857c982560c524d0bcba0d4b8255ed80220efc",
+  "requirements.txt": "e7b046acf54a6e8e73286454d54f8ce972ce283a3c9304ea7e52e5a7c127b807",
+  "hicad_complete_coding_handoff_2026-11-04.zip": "cce4774b96947c12416b85e25077a7276ea19db76939ae5751ad845ea92e01d7",
+  "HICAD_AB_IMPLEMENTATION.md": "760f75a038f44249d1979ee53401801a7b3b9a334009673ff400c3eaefd4fc13",
+  "README.md": "7b6a49c3fb00e3998e1a753acedab20ca993441c664ac924dbd582111dff1dc4",
+  ".gitignore": "114f3cdc2057d610cbc810f69cbc4f195acec0cd15dd54e9b154cf5f6657fc24",
+  "toys/boltzmann/requirements.txt": "ba0648e2efaf4ef12da15d18a080d513c358c52eedcad60ba92ef5092f895531",
+  "toys/boltzmann/inspect_h5.py": "9cb860c7c0209d77f0e35219dc3ae08267f3698d5cdcbae810f724a608db42d8",
+  "toys/boltzmann/README.md": "13bcb7fb97ee92244190341b459eeb2f59dca86878c9d7da313aecdb1ce5fe25",
+  "toys/boltzmann/.gitignore": "3d0aa9391d29fb5c10edfbc355e5d58cb5817116b3a752a33e419edcd07b0d0f",
+  "toys/boltzmann/generate_thermal_h5.py": "2d9a683e734e1f6df3ce71c4d13341e2f6cbf7e49163582a60d7e2ed173e449a",
+  "toys/boltzmann/inspect_thermal_distributions.ipynb": "1edbc60a78bc9265f567b7dca4d35cddd188fd96a73861b1a93f69177a11c1f7",
+  "toys/boltzmann/verify_fits_and_plots.py": "23a78e3c1909de9073effe32dc544f5fefce4bfb256cfe2d4ffd96055f2a1da3",
+  "toys/event-display/h5_event_display.html": "11b58687927e8165332b3bf6690553a0bb0a4c4aad68a7fa4fd9e528db6a2929",
+  "toys/event-display/README.md": "c189a71de60414ca92cd325394499fd36ec155fe804b7bc9394982b32f2e5d9e",
+  "toys/event-display/serve_h5_events.py": "7caeca5213f386385120857b55522709a5348714f549242a328f2a92da94012e",
+  "toys/boltzmann/output/thermal_events_rhic_200GeV.h5": "73f6ca5652459404bb76fee119d622ddcbc58171027eca54ae96bb619a6f2086",
+  "toys/boltzmann/output/thermal_events_lhc_5020GeV.h5": "1e395c56a636bd7de853917d6b3e2aea80a663b2b9520d446d31f240d45c9447",
+  "toys/boltzmann/output/thermal_events_bes_9p2GeV.h5": "c94fd3953d5c7f5ca762457b9bd1d87db674c725135d571c9c0cb8c0d73c5bc9",
+  "toys/boltzmann/.ipynb_checkpoints/inspect_thermal_distributions-checkpoint.ipynb": "1edbc60a78bc9265f567b7dca4d35cddd188fd96a73861b1a93f69177a11c1f7"
+}
