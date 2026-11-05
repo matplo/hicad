@@ -1,0 +1,61 @@
+{
+  "schema_version": "hicad-omni-workflow-plan-1",
+  "status": "proposed_not_executable_yet",
+  "physics": {
+    "setting": "bes",
+    "ecm_gev": 9.2,
+    "centrality": [0.0, 0.05],
+    "background_temperature_gev": 0.1,
+    "acceptance": {"eta_max": 1.0, "pt_min_gev": 0.0, "pt_max_gev": null, "azimuth": "full"},
+    "particle_selection": "all_six_charged_toy_species",
+    "source_grid": "signal-grid.json",
+    "primary_injection_probability": 1.0,
+    "label_policy": "injection_decision_before_acceptance"
+  },
+  "data": {
+    "unique_background_parents": 20000,
+    "split_fractions": {"train": 0.7, "validation": 0.15, "test": 0.15},
+    "group_split_by": "background_family_id_including_all_signal_and_control_twins",
+    "new_seed_namespace": "hicad-omni-v1",
+    "storage": "ragged_full_particle_records_with_offsets_and_explicit_masks",
+    "truncate_particles": false,
+    "maximum_length_policy": "benchmark_then_configure_without_silent_particle_loss"
+  },
+  "representation": {
+    "primary": "ideal_kinematics_eta_phi_logpt_logE",
+    "reference_axis": "fixed_detector_origin_not_event_sum_momentum",
+    "extra_truth_inputs": false,
+    "pid_input": false,
+    "centrality_input": false,
+    "global_geometry_inputs": false,
+    "azimuth_augmentation": "common_rotation_of_entire_event",
+    "normalization": "fit_on_training_only_preserve_validity_mask",
+    "required_checks": ["phi_periodicity", "padding_invariance", "particle_permutation_invariance", "small_and_empty_events"]
+  },
+  "training": {
+    "package": "omnilearned",
+    "architecture": "PET2",
+    "mode": "classifier",
+    "primary_strategy": "pooled_signal_grid_from_scratch",
+    "sample_signal_settings": "uniform_across_training_grid",
+    "balanced_classes": true,
+    "model_size": "benchmark_compact_then_official_small",
+    "epochs_initial_cap": 20,
+    "early_stopping": "validation_loss",
+    "training_seeds": [101, 202, 303],
+    "device": "auto_cuda_then_tested_mps_then_cpu",
+    "pretraining_experiments": ["jet_pretrained_frozen_encoder", "jet_pretrained_fine_tune", "optional_toy_domain_pretraining"],
+    "download_weights_automatically": false
+  },
+  "evaluation": {
+    "primary_metric": "roc_auc",
+    "secondary_metrics": ["average_precision", "signal_efficiency_at_fpr_0.1", "signal_efficiency_at_fpr_0.01"],
+    "test_settings": "every_signal_grid_point",
+    "bootstrap_unit": "background_family_id",
+    "bootstrap_replicates": 1000,
+    "mixture_fractions": [0.0, 0.01, 0.05, 0.1, 0.25, 0.5, 1.0],
+    "mixture_evaluation": "fixed_classifier_no_retraining",
+    "parameter_generalization": "predeclared_withheld_combinations_with_separate_event_families",
+    "output": "standalone_html_with_auc_maps_rocs_score_distributions_and_csv"
+  }
+}

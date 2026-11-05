@@ -1,0 +1,38 @@
+{
+  "schema_version": "hicad-bes-cumulants-1",
+  "root_seed": "42",
+  "selected_events": 100000,
+  "centrality": [0.0, 0.05],
+  "centrality_fine_bins": 5,
+  "bootstrap_blocks": 200,
+  "bootstrap_replicates": 400,
+  "background_temperature_gev": 0.1,
+  "pt_gev": [0.4, 2.0],
+  "rapidity_windows": [0.25, 0.5, 0.75, 1.0],
+  "integration_tolerance": 0.000002,
+  "strength": {
+    "temperature_gev": 0.1,
+    "beta": 0.4,
+    "direction": "transverse",
+    "clumps": 1,
+    "n": [1, 2, 4, 8, 16, 32],
+    "f": [0.0, 0.01, 0.05, 0.1, 0.25, 0.5, 1.0]
+  },
+  "shape": {
+    "temperature_gev": [0.06, 0.08, 0.1, 0.14, 0.18],
+    "beta": [0.0, 0.2, 0.4, 0.6, 0.8],
+    "direction": ["transverse", "isotropic_3d"],
+    "n": 8,
+    "f": [0.1],
+    "clumps": 1
+  },
+  "clump_scan": {
+    "temperature_gev": 0.1,
+    "beta": 0.4,
+    "direction": ["transverse", "isotropic_3d"],
+    "n": 8,
+    "f": [0.1],
+    "clumps": [2, 4]
+  },
+  "models": ["shared_boost", "event_mixed", "poisson"]
+}

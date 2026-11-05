@@ -1,0 +1,41 @@
+{
+  "schema_version": "hicad-bes-cumulants-1",
+  "root_seed": "43",
+  "selected_events": 100000,
+  "centrality": [
+    0.0,
+    0.05
+  ],
+  "centrality_fine_bins": 5,
+  "bootstrap_blocks": 200,
+  "bootstrap_replicates": 400,
+  "background_temperature_gev": 0.1,
+  "pt_gev": [
+    0.4,
+    2.0
+  ],
+  "rapidity_windows": [
+    0.5
+  ],
+  "integration_tolerance": 2e-06,
+  "strength": {
+    "temperature_gev": 0.1,
+    "beta": 0.4,
+    "direction": "transverse",
+    "clumps": 1,
+    "n": [
+      8
+    ],
+    "f": [
+      0,
+      0.01,
+      0.1,
+      1
+    ]
+  },
+  "models": [
+    "shared_boost",
+    "event_mixed",
+    "poisson"
+  ]
+}

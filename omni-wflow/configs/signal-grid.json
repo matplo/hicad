@@ -1,0 +1,12 @@
+{
+  "schema_version": "hicad-omni-signal-grid-plan-1",
+  "status": "proposed_not_executable_yet",
+  "temperature_gev": [0.06, 0.1, 0.18],
+  "beta": [0.0, 0.4, 0.8],
+  "protons_per_clump": [2, 4, 8, 16],
+  "clumps_per_event": [1, 2],
+  "direction": ["transverse", "isotropic_3d"],
+  "models": ["shared_boost", "event_mixed", "azimuth_decohered", "mean_matched_poisson"],
+  "primary_model": "shared_boost",
+  "primary_signal_probability": 1.0
+}

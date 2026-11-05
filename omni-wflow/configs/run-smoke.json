@@ -1,0 +1,70 @@
+{
+  "data": {
+    "parents": 400,
+    "data_seed": 412193,
+    "centrality": [
+      0.0,
+      0.05
+    ],
+    "background_temperature_gev": 0.1,
+    "acceptance": {
+      "eta_max": 1.0,
+      "pt_min_gev": 0.0,
+      "pt_max_gev": null,
+      "azimuth": "full"
+    },
+    "grid": {
+      "temperature_gev": [
+        0.1
+      ],
+      "beta": [
+        0.4
+      ],
+      "protons_per_clump": [
+        8
+      ],
+      "clumps_per_event": [
+        1
+      ],
+      "direction": [
+        "transverse",
+        "isotropic_3d"
+      ]
+    },
+    "heldout_settings": []
+  },
+  "training": {
+    "representation": "ideal",
+    "model_size": "compact",
+    "epochs": 2,
+    "patience": 3,
+    "batch": 32,
+    "threads": 4,
+    "lr": 0.0007,
+    "device": "auto",
+    "periodic_embedding": true
+  },
+  "training_seeds": [
+    101
+  ],
+  "evaluation": {
+    "batch": 64,
+    "threads": 4,
+    "device": "auto",
+    "rotations": 2,
+    "bootstrap": 100,
+    "control_settings": [
+      0,
+      1
+    ],
+    "mixture_fractions": [
+      0,
+      0.01,
+      0.05,
+      0.1,
+      0.25,
+      0.5,
+      1
+    ]
+  }
+}
